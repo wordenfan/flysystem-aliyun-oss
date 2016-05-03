@@ -6,6 +6,9 @@ use Storage;
 use OSS\OssClient;
 use League\Flysystem\Filesystem;
 use Illuminate\Support\ServiceProvider;
+use ApolloPY\Flysystem\AliyunOss\Plugins\CtyDirectUploadSignature;
+use ApolloPY\Flysystem\AliyunOss\Plugins\CtyPutFile;
+use ApolloPY\Flysystem\AliyunOss\Plugins\CtyGetFile;
 use ApolloPY\Flysystem\AliyunOss\Plugins\PutFile;
 use ApolloPY\Flysystem\AliyunOss\Plugins\SignedDownloadUrl;
 
@@ -38,6 +41,9 @@ class AliyunOssServiceProvider extends ServiceProvider
             $adapter = new AliyunOssAdapter($client, $bucket, $prefix);
 
             $filesystem = new Filesystem($adapter);
+            $filesystem->addPlugin(new ctyDirectUploadSignature());
+            $filesystem->addPlugin(new CtyPutFile());
+            $filesystem->addPlugin(new CtyGetFile());
             $filesystem->addPlugin(new PutFile());
             $filesystem->addPlugin(new SignedDownloadUrl());
 

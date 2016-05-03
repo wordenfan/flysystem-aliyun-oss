@@ -2,6 +2,8 @@
 
 namespace ApolloPY\Flysystem\AliyunOss;
 
+use OSS\Http\ResponseCore;
+use OSS\Http\RequestCore;
 use OSS\OssClient;
 use OSS\Core\OssException;
 use League\Flysystem\Util;
@@ -9,6 +11,8 @@ use League\Flysystem\Config;
 use League\Flysystem\Adapter\AbstractAdapter;
 use League\Flysystem\Adapter\Polyfill\StreamedTrait;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
+use Illuminate\Http\Request;
+use DateTime;
 
 /**
  * Aliyun Oss Adapter class.
@@ -483,5 +487,226 @@ class AliyunOssAdapter extends AbstractAdapter
         }
 
         return $options;
+    }
+
+    /**
+     * 传太医文件读取
+     *
+     */
+    public function ctyDirectUploadSignature($isPublic=true)
+    {
+        $id= config('filesystems.disks.oss.access_id');
+        $key= config('filesystems.disks.oss.access_key');
+        $endpoint= config('filesystems.disks.oss.endpoint');
+
+        $env_arr = $this->select_env($isPublic);
+        $bucket = $env_arr[0];
+        $host = 'http://'.$bucket.'.'.$endpoint;
+        $url = \Request::getUri();
+        $callbackUrl = substr(\Request::getUri(),0,strpos($url,'/get_oss_signature/health_record'));//TODO
+        $callbackUrl = $callbackUrl.'/get_oss_signature/callback';
+
+        $callback_param = array('callbackUrl'=>$callbackUrl,
+            'callbackBody'=>'filename=${object}&size=${size}&mimeType=${mimeType}&height=${imageInfo.height}&width=${imageInfo.width}',
+            'callbackBodyType'=>"application/x-www-form-urlencoded");
+        $callback_string = json_encode($callback_param);
+
+        $base64_callback_body = base64_encode($callback_string);
+        $now = time();
+        $expire = 30; //设置该policy超时时间是10s. 即这个policy过了这个有效时间，将不能访问
+        $end = $now + $expire;
+        $expiration = $this->gmt_iso8601($end);
+
+        $dir = 'health_record/';
+
+        //最大文件大小.用户可以自己设置
+        $condition = array(0=>'content-length-range', 1=>0, 2=>1048576000);
+        $conditions[] = $condition;
+
+        //表示用户上传的数据,必须是以$dir开始, 不然上传会失败,这一步不是必须项,只是为了安全起见,防止用户通过policy上传到别人的目录
+        $start = array(0=>'starts-with', 1=>'$key', 2=>$dir);
+        $conditions[] = $start;
+
+        $arr = array('expiration'=>$expiration,'conditions'=>$conditions);
+        //echo json_encode($arr);
+        //return;
+        $policy = json_encode($arr);
+        $base64_policy = base64_encode($policy);
+        $string_to_sign = $base64_policy;
+        $signature = base64_encode(hash_hmac('sha1', $string_to_sign, $key, true));
+
+        $response = array();
+        $response['accessid'] = $id;
+        $response['host'] = $host;
+        $response['policy'] = $base64_policy;
+        $response['signature'] = $signature;
+        $response['expire'] = $end;
+        $response['callback'] = $base64_callback_body;
+        //这个参数是设置用户上传指定的前缀
+        $response['dir'] = $dir;
+        return json_encode($response);
+    }
+
+    private function gmt_iso8601($time) {
+        $dtStr = date("c", $time);
+        $mydatetime = new DateTime($dtStr);
+        $expiration = $mydatetime->format(DateTime::ISO8601);
+        $pos = strpos($expiration, '+');
+        $expiration = substr($expiration, 0, $pos);
+        return $expiration."Z";
+    }
+    /**
+     * 传太医文件读取
+     *
+     */
+    public function ctyGetFile($ossFilePath, $isPublic=true)
+    {
+        $object = $this->applyPathPrefix($ossFilePath);
+
+        $env_arr = $this->select_env($isPublic);
+        $bucket = $env_arr[0];
+        $domain = $env_arr[1];
+        $timeout = 20;
+        if($isPublic){
+            $public_url = $domain.'/'.$object;
+        }else{
+            try {
+                $signedUrl = $this->client->signUrl($bucket, $object, $timeout);
+            } catch (OssException $e) {
+                return json_encode(array(0,'文件读取失败',$e->getMessage()));
+            }
+        }
+
+        $visitUrl = $isPublic ? $public_url : $signedUrl;
+
+        return json_encode(array(0,'文件读取成功',$visitUrl));
+    }
+    /**
+     * 传太医服务器端上传文件
+     *
+     */
+    public function ctyPutFile(Request $request, $ossDir, $localDirPath,$isPublic=true)
+    {
+        //客户端上传校验
+        $file_name = $this->prePutFile($request,$localDirPath);
+        if(is_array($file_name)){
+            return json_encode($file_name);
+        }else{
+            $localFilePath = $localDirPath.'/'.$file_name;
+            $ossFilePath = $ossDir.'/'.$file_name;
+        }
+        //
+        $object = $this->applyPathPrefix($ossFilePath);
+        //阿里云上传,匹配对应的bucket
+        $env_arr = $this->select_env($isPublic);
+        $bucket = $env_arr[0];
+        $domain = $env_arr[1];
+        if($isPublic){
+            try {
+                echo 'public__bucket=='.$bucket.'<br>';
+                echo 'public__object=='.$object.'<br>';
+                $this->client->uploadFile($bucket, $object, $localFilePath);
+            } catch (OssException $e) {
+                return json_encode(array(90000,'文件写入失败',$e->getMessage(),''));
+            }
+        }else{
+            $timeout = 3600;
+            try {
+//                echo 'private__bucket=='.$bucket.'<br>';
+//                echo 'private__object=='.$object.'<br>';
+//                echo 'file_name=='.$localDirPath.'/'.$file_name.'<br>';
+//                $this->client->uploadFile($bucket, $object, $localFilePath);
+
+                echo 'private__bucket=='.$bucket.'<br>';
+                echo 'private__object=='.$object.'<br>';
+                echo 'file_name=='.$localDirPath.'/'.$file_name.'<br>';
+                $signedUrl = $this->client->signUrl($bucket, $object, $timeout, "PUT");
+                $content = file_get_contents($localFilePath);
+                $request = new RequestCore($signedUrl);
+                $request->set_method('PUT');
+                $request->add_header('Content-Type', '');
+                $request->add_header('Content-Length', strlen($content));
+                $request->set_body($content);
+                $request->send_request();
+                $res = new ResponseCore($request->get_response_header(),$request->get_response_body(), $request->get_response_code());
+                if (!$res->isOK()) {
+                    return json_encode(9000,'文件上传失败','');
+                }
+            } catch (OssException $e) {
+                return json_encode(9000,'文件写入失败',$e->getMessage());
+            }
+        }
+
+        //删除原文件
+        @unlink($localFilePath);
+
+        $data = $domain.'/'.$object;
+
+        return json_encode(array(0,'上传成功',$data));
+    }
+    /**
+     * 传太医客户端form表单上传文件校验
+     * 上传表单的name值为photo
+     *
+     * return 成功返回文件名,错误返回错误信息的数组
+     */
+    private function prePutFile(Request $request,$localDirPath)
+    {
+        if(!$request->hasFile('photo')){
+            return array(90000,'文件photo不能为空','');
+        }
+        $file = $request->file('photo');
+
+        $fileName = date('Y_m_d').'_'.str_pad(mt_rand(0,99999999),8,rand(0,9),STR_PAD_LEFT).'_'.$file->getClientOriginalName();
+        //本地上传
+        if(empty($file) || !$file->isValid()){
+            return array(90000,'文件错误或者为空','');
+        }
+        //目录是否具有读写权限
+        if (!is_dir($localDirPath) || @opendir($localDirPath)=== false){
+            return array(90000,'本地目录不存在或权限不足','');
+        }
+        //图片类型,大小校验
+        $imageTypes = explode(';', config('filesystems.disks.oss.allowed_types'));
+        $max_file_size = config('filesystems.disks.oss.max_file_size');
+        $size = $file->getClientSize();
+        $type = $file->getClientMimeType();
+
+        if ($size > $max_file_size) {
+            return array(90000,'文件大小不能超过:'.config('filesystems.disks.oss.max_file_size'),'');
+        }
+
+        if (!in_array($type, $imageTypes)) {
+            return array(90000,'上传文件类型错误','');
+        }
+        $file->move($localDirPath, $fileName);
+
+        return $fileName;
+    }
+    /**
+     *  匹配对应的bucket和domain
+     */
+    private function select_env($isPublic){
+        $bucket_config = config('filesystems.disks.oss.bucket_list');
+        $host_config = config('filesystems.disks.oss.host_name');
+
+        if(env('APP_ENV')=='local'){
+            if($isPublic){
+                $bucket = $bucket_config['oss_public_test_bucket'];
+                $domain = $host_config['oss_public_test_img'];
+            }else{
+                $bucket = $bucket_config['oss_private_test_bucket'];
+                $domain = $host_config['oss_private_test_pic'];
+            }
+        }else{
+            if($isPublic){
+                $bucket = $bucket_config['public_img_bucket'];
+                $domain = $host_config['oss_public_img'];
+            }else{
+                $bucket = $bucket_config['private_pic_bucket'];
+                $domain = $host_config['oss_private_pic'];
+            }
+        }
+        return array($bucket,$domain);
     }
 }
