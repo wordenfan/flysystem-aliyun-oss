@@ -505,6 +505,9 @@ class AliyunOssAdapter extends AbstractAdapter
         $url = \Request::getUri();
         $callbackUrl = substr(\Request::getUri(),0,strpos($url,'/get_oss_signature/health_record'));//TODO
         $callbackUrl = $callbackUrl.'/get_oss_signature/callback';
+        if(env('APP_ENV')=='local'){//本地暂时调用dev的外网路径
+            $callbackUrl = "http://dev.shaka.uicare.cn/api/v1/health_mgmt/admin/get_oss_signature/callback";
+        }
 
         $callback_param = array('callbackUrl'=>$callbackUrl,
             'callbackBody'=>'filename=${object}&size=${size}&mimeType=${mimeType}&height=${imageInfo.height}&width=${imageInfo.width}',
