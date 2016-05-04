@@ -565,14 +565,13 @@ class AliyunOssAdapter extends AbstractAdapter
      * 传太医文件读取
      *
      */
-    public function ctyGetFile($ossFilePath, $isPublic=true)
+    public function ctyGetFile($ossFilePath, $isPublic=true，$timeout=3600)
     {
         $object = $this->applyPathPrefix($ossFilePath);
 
         $env_arr = $this->select_env($isPublic);
         $bucket = $env_arr[0];
         $domain = $env_arr[1];
-        $timeout = 20;
         if($isPublic){
             $public_url = $domain.'/'.$object;
         }else{
