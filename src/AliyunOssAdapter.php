@@ -565,7 +565,7 @@ class AliyunOssAdapter extends AbstractAdapter
      * 传太医文件读取
      *
      */
-    public function ctyGetFile($ossFilePath, $isPublic=true，$timeout=3600)
+    public function ctyGetFile($ossFilePath, $isPublic=true, $timeout=3600)
     {
         $object = $this->applyPathPrefix($ossFilePath);
 
