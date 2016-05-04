@@ -609,8 +609,6 @@ class AliyunOssAdapter extends AbstractAdapter
         $domain = $env_arr[1];
         if($isPublic){
             try {
-                echo 'public__bucket=='.$bucket.'<br>';
-                echo 'public__object=='.$object.'<br>';
                 $this->client->uploadFile($bucket, $object, $localFilePath);
             } catch (OssException $e) {
                 return json_encode(array(90000,'文件写入失败',$e->getMessage(),''));
@@ -618,14 +616,6 @@ class AliyunOssAdapter extends AbstractAdapter
         }else{
             $timeout = 3600;
             try {
-//                echo 'private__bucket=='.$bucket.'<br>';
-//                echo 'private__object=='.$object.'<br>';
-//                echo 'file_name=='.$localDirPath.'/'.$file_name.'<br>';
-//                $this->client->uploadFile($bucket, $object, $localFilePath);
-
-                echo 'private__bucket=='.$bucket.'<br>';
-                echo 'private__object=='.$object.'<br>';
-                echo 'file_name=='.$localDirPath.'/'.$file_name.'<br>';
                 $signedUrl = $this->client->signUrl($bucket, $object, $timeout, "PUT");
                 $content = file_get_contents($localFilePath);
                 $request = new RequestCore($signedUrl);
