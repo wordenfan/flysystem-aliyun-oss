@@ -506,7 +506,7 @@ class AliyunOssAdapter extends AbstractAdapter
         $callbackUrl = substr(\Request::getUri(),0,strpos($url,'/get_oss_signature/health_record'));//TODO
         $callbackUrl = $callbackUrl.'/get_oss_signature/callback';
         if(env('APP_ENV')=='local'){//本地暂时调用dev的外网路径
-            $callbackUrl = "http://dev.shaka.uicare.cn/api/v1/health_mgmt/admin/get_oss_signature/callback";
+            $callbackUrl = config('filesystems.disks.oss.oss_direct_upload_callback');
         }
 
         $callback_param = array('callbackUrl'=>$callbackUrl,
@@ -516,6 +516,8 @@ class AliyunOssAdapter extends AbstractAdapter
         $callback_string = json_encode($callback_param);
 
         $base64_callback_body = base64_encode($callback_string);
+        $base64_callback_body = '';//回调 TODO
+
         $now = time();
         $expire = 30; //设置该policy超时时间是10s. 即这个policy过了这个有效时间，将不能访问
         $end = $now + $expire;
