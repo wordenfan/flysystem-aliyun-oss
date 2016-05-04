@@ -510,6 +510,7 @@ class AliyunOssAdapter extends AbstractAdapter
         }
 
         $callback_param = array('callbackUrl'=>$callbackUrl,
+            "callbackHost"=>"dev.shaka.uicare.cn",
             'callbackBody'=>'filename=${object}&size=${size}&mimeType=${mimeType}&height=${imageInfo.height}&width=${imageInfo.width}',
             'callbackBodyType'=>"application/x-www-form-urlencoded");
         $callback_string = json_encode($callback_param);
