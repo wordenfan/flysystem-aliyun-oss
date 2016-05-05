@@ -11,7 +11,7 @@ use League\Flysystem\Plugin\AbstractPlugin;
  *
  * @author  ApolloPY <ApolloPY@Gmail.com>
  */
-class CtyDirectUploadSignature extends AbstractPlugin
+class CtySetBucket extends AbstractPlugin
 {
     /**
      * Get the method name.
@@ -20,25 +20,27 @@ class CtyDirectUploadSignature extends AbstractPlugin
      */
     public function getMethod()
     {
-        return 'ctyDirectUploadSignature';
+        return 'ctySetBucket';
     }
 
     /**
      * Handle.
      *
-     * @param string $dir
-     * @return json
+     * @param string $path
+     * @param string $isPublic
+     * @param array  $config
+     * @return bool
      */
-    public function handle($dir,$expire)
+    public function handle($isPublic=true)
     {
         if (! method_exists($this->filesystem, 'getAdapter')) {
             return false;
         }
 
-        if (! method_exists($this->filesystem->getAdapter(), 'ctyDirectUploadSignature')) {
+        if (! method_exists($this->filesystem->getAdapter(), 'ctySetBucket')) {
             return false;
         }
 
-        return $this->filesystem->getAdapter()->ctyDirectUploadSignature($dir,$expire);
+        return $this->filesystem->getAdapter()->ctySetBucket($isPublic);
     }
 }

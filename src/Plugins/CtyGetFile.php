@@ -26,12 +26,10 @@ class CtyGetFile extends AbstractPlugin
     /**
      * Handle.
      *
-     * @param string $path
-     * @param string $localFilePath
-     * @param array  $config
-     * @return bool
+     * @param string $ossFilePath
+     * @param int 默认十年
      */
-    public function handle($ossFilePath, $isPublic=true)
+    public function handle($ossFilePath, $timeout=315360000)
     {
         if (! method_exists($this->filesystem, 'getAdapter')) {
             return false;
@@ -41,6 +39,7 @@ class CtyGetFile extends AbstractPlugin
             return false;
         }
 
-        return $this->filesystem->getAdapter()->ctyGetFile($ossFilePath, $isPublic);
+        return $this->filesystem->getAdapter()->ctyGetFile($ossFilePath, $timeout);
     }
+
 }
