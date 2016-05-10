@@ -514,12 +514,12 @@ class AliyunOssAdapter extends AbstractAdapter
 
         $host = 'http://'.$this->bucket.'.'.$endpoint;
         $url = \Request::getUri();
-        $callbackUrl = substr(\Request::getUri(),0,strpos($url,'/get_oss_signature/health_record'));//TODO
+        $callbackUrl = substr(\Request::getUri(),0,strpos($url,'/get_oss_signature/health_record'));
         $callbackUrl = $callbackUrl.'/get_oss_signature/callback';
+
         if(env('APP_ENV')=='local'){//本地暂时调用dev的外网路径
-            $callbackUrl = config('filesystems.disks.oss.oss_direct_upload_callback');
+            $callbackUrl = config('filesystems.disks.oss.oss_direct_upload_callback');//上线配置地址修改 TODO
         }
-//        $callbackUrl ='http://oss-demo.aliyuncs.com:23450';
 
         $callback_param = array('callbackUrl'=>$callbackUrl,
             "callbackHost"=> config('filesystems.disks.oss.oss_direct_upload_callback_host'),
@@ -690,7 +690,7 @@ class AliyunOssAdapter extends AbstractAdapter
         $bucket_config = config('filesystems.disks.oss.bucket_list');
         $host_config = config('filesystems.disks.oss.host_name');
 
-        if(env('APP_ENV')=='local'){
+        if(env('APP_ENV')=='local'||env('APP_ENV')=='dev'){
             if($acl=='public'){
                 $bucket = $bucket_config['test_public'];
                 $domain = $host_config['test_public'];
