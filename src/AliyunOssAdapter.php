@@ -597,16 +597,19 @@ class AliyunOssAdapter extends AbstractAdapter
      * 传太医服务器端上传文件
      *
      */
-    public function ctyPutFile(Request $request, $ossDir, $localDirPath)
+    public function ctyPutFile($ossDir, $localDirPath,$request)
     {
-        //客户端上传校验
-        $file_name = $this->prePutFile($request,$localDirPath);
-        if(is_array($file_name)){
-            return json_encode($file_name);
+        //是否为客户端上传
+        if(is_string($request)){
+            $file_name = $request;
         }else{
-            $localFilePath = $localDirPath.'/'.$file_name;
-            $ossFilePath = $ossDir.'/'.$file_name;
+            $file_name = $this->prePutFile($request,$localDirPath);
+            if(is_array($file_name)){
+                return json_encode($file_name);
+            }
         }
+        $localFilePath = $localDirPath.'/'.$file_name;
+        $ossFilePath = $ossDir.'/'.$file_name;
         //
         $object = $this->applyPathPrefix($ossFilePath);
         $acl = $this->client->getBucketAcl($this->bucket);
