@@ -68,3 +68,91 @@ edit the config file: config/ide-helper.php
     '\Illuminate\Contracts\Filesystem\Filesystem' => ApolloPY\Flysystem\AliyunOss\FilesystemAdapter::class,
 ],
 ```
+
+## Extend Plugins
+
+客户端直传获取签名
+
+```php
+public function getOssDirectUploadSignature(){
+    $disk = Storage::disk('oss');
+    $disk->ctySetBucket('public');
+    $dir = 'health_record/';
+    $expire = 30;
+    $res = $disk->ctyDirectUploadSignature($dir,$expire);
+
+    echo $res;
+}
+```
+客户端直传回调函数
+
+```php
+public function getOssDirectUploadSignatureCallback(){
+    header('HTTP/1.0 200 OK');
+    header("Content-Type: application/json");
+    $data = array("Status"=>"Ok");
+    header("Content-Length:".strlen(json_encode($data)));
+    echo json_encode($data);
+}
+```
+系统函数调用
+
+```php
+public function systemHandler(){
+    //测试文件系统自有方法
+    $disk = Storage::disk('oss');
+    $disk->ctySetBucket('cty-img-test');
+    $res = $disk->lastModified('health_record/2016_05_04_13570876_test_02.jpg');
+    var_dump(date('Y-m-d H:i:s',$res));
+}
+```
+文件读取
+
+```php
+public function readFile()
+{
+    $disk = Storage::disk('oss');
+
+    //public读
+    $disk->ctySetBucket('public');
+    $oss_file = 'health_record/2016_05_04_74408439_logo.png';
+    $get_res = $disk->ctyGetFile($oss_file);
+    echo $get_res;
+    exit;
+
+    //private读
+    $disk->ctySetBucket('private');
+    $oss_file = 'health_record/2016_05_04_46763774_test_02.jpg';
+    $get_res = $disk->ctyGetFile($oss_file,30);
+    echo $get_res;
+}
+```
+文件写入
+
+```php
+public function writeFile(Request $request){
+    $disk = Storage::disk('oss');
+
+    //Form表单public写
+    $disk->ctySetBucket('public');
+    $local_file_path = config('filesystems.disks.oss.local_hrd_img_path');//服务器本地路径
+    $oss_path = config('filesystems.disks.oss.oss_hrd_img_path');//OSS路径
+    $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$request);
+    echo $put_res;
+
+    //Form表单private写
+    $disk->ctySetBucket('private');
+    $local_file_path = config('filesystems.disks.oss.local_hrd_img_path');//服务器本地路径
+    $oss_path = config('filesystems.disks.oss.oss_hrd_img_path');//OSS路径
+    $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$request);
+    echo $put_res;
+
+    //服务器本地图片上传
+    $disk = Storage::disk('oss');
+    $disk->ctySetBucket('public');
+    $fileName = date('Y_m_d').'_'.'_test.jpg';
+    $local_file_path = config('filesystems.disks.oss.local_chat_img_path');//服务器本地路径
+    $oss_path = config('filesystems.disks.oss.oss_chat_img_path');//OSS路径
+    $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$fileName);
+}
+```
