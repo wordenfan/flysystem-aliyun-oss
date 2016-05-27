@@ -532,9 +532,10 @@ class AliyunOssAdapter extends AbstractAdapter
      */
     public function ctyDirectUploadSignature($dir,$expire)
     {
-        $id= config('filesystems.disks.oss.access_id');
-        $key= config('filesystems.disks.oss.access_key');
-        $endpoint= config('filesystems.disks.oss.endpoint');
+        $oss_config = config('filesystems.disks.oss');
+        $id         = $oss_config['access_id'];
+        $key        = $oss_config['access_key'];
+        $endpoint   = $oss_config['endpoint'];
 
         $bucket_host = $this->getBucket($dir,true);
         $bucket = $bucket_host[0];
@@ -545,11 +546,11 @@ class AliyunOssAdapter extends AbstractAdapter
         $callbackUrl = substr($whole_url,0,strpos($whole_url,'/get_oss_signature/health_record'));
         $callbackUrl = $callbackUrl.'/get_oss_signature/callback';
         if(env('APP_ENV')=='local'||env('APP_ENV')=='dev'){
-            $callbackUrl = 'http://dev.shaka.uicare.cn/api/v1/health_mgmt/admin/get_oss_signature/callback';//方便本地调试
+            $callbackUrl = $oss_config['oss_direct_upload_callback'];//方便本地调试
         }
 
         $callback_param = array('callbackUrl'=>$callbackUrl,
-            "callbackHost"=> $_SERVER['HTTP_HOST'],//不带http://
+            "callbackHost"=> $oss_config['oss_direct_upload_callback_host'],//不带http://
             'callbackBody'=>'filename=${object}&size=${size}&mimeType=${mimeType}&height=${imageInfo.height}&width=${imageInfo.width}',
             'callbackBodyType'=>"application/x-www-form-urlencoded");
         $callback_string = json_encode($callback_param);
