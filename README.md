@@ -75,9 +75,9 @@ edit the config file: config/ide-helper.php
 
 ```php
 public function getOssDirectUploadSignature(){
+    $month_day_dir = date('Y_m_d',$_SERVER['REQUEST_TIME']).'/'.date('H',$_SERVER['REQUEST_TIME']).'/';
     $disk = Storage::disk('oss');
-    $disk->ctySetBucket('public');
-    $dir = 'health_record/';
+    $dir = 'health_record'.'/'.$month_day_dir;
     $expire = 30;
     $res = $disk->ctyDirectUploadSignature($dir,$expire);
 
@@ -134,25 +134,23 @@ public function writeFile(Request $request){
     $disk = Storage::disk('oss');
 
     //Form表单public写
-    $disk->ctySetBucket('public');
-    $local_file_path = config('filesystems.disks.oss.local_hrd_img_path');//服务器本地路径
-    $oss_path = config('filesystems.disks.oss.oss_hrd_img_path');//OSS路径
+    $local_file_path = 'oss_transfer';//服务器本地路径
+    $oss_path = 'health_record/test';//OSS路径
     $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$request);
     echo $put_res;
 
     //Form表单private写
     $disk->ctySetBucket('private');
-    $local_file_path = config('filesystems.disks.oss.local_hrd_img_path');//服务器本地路径
-    $oss_path = config('filesystems.disks.oss.oss_hrd_img_path');//OSS路径
+    $local_file_path = 'oss_transfer';//服务器本地路径
+    $oss_path = 'private_health_record/test';//OSS路径
     $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$request);
     echo $put_res;
 
     //服务器本地图片上传
     $disk = Storage::disk('oss');
-    $disk->ctySetBucket('public');
     $fileName = date('Y_m_d').'_'.'_test.jpg';
-    $local_file_path = config('filesystems.disks.oss.local_chat_img_path');//服务器本地路径
-    $oss_path = config('filesystems.disks.oss.oss_chat_img_path');//OSS路径
+    $local_file_path = 'oss_transfer';//服务器本地路径
+    $oss_path = 'health_record/test';//OSS路径
     $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$fileName);
 }
 ```
