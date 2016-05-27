@@ -660,7 +660,7 @@ class AliyunOssAdapter extends AbstractAdapter
         }
         $file = $request->file('photo');
 
-        $fileName = 'cty_'.date('Ymd').'_'.str_pad(mt_rand(0,99999999),8,rand(0,9),STR_PAD_LEFT).'_'.$file->getClientOriginalName();
+        $fileName = date('His').'_'.str_pad(mt_rand(0,99999999),8,rand(0,9),STR_PAD_LEFT).'_'.$file->getClientOriginalName();
         //本地上传
         if(empty($file) || !$file->isValid()){
             return array(90000,'文件错误或者为空','');
