@@ -13,6 +13,7 @@ use League\Flysystem\Adapter\Polyfill\StreamedTrait;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use Illuminate\Http\Request;
 use DateTime;
+use Log;
 
 /**
  * Aliyun Oss Adapter class.
@@ -89,10 +90,13 @@ class AliyunOssAdapter extends AbstractAdapter
         //权限
         $public_dir  = config('filesystems.disks.oss.public');
         $private_dir = config('filesystems.disks.oss.private');
+        $acl = '';
         if(in_array(explode('/',$dir)[0],$public_dir)){
             $acl = 'public';
         }elseif(in_array(explode('/',$dir)[0],$private_dir)){
             $acl = 'private';
+        }else{
+            $acl = explode('/',$dir)[0];
         }
         //环境
         if(env('APP_ENV')=='local'||env('APP_ENV')=='dev') {
@@ -100,6 +104,7 @@ class AliyunOssAdapter extends AbstractAdapter
         }else{
             $bucket_key = 'production_' . $acl;
         }
+
         $bucket_host = config('filesystems.disks.oss.bucket_list')[$bucket_key];
 
         return $withHost ? $bucket_host : $bucket_host[0];
@@ -604,7 +609,7 @@ class AliyunOssAdapter extends AbstractAdapter
      * 传太医文件读取
      * ['private', 'public-read', 'public-read-write']
      */
-    public function ctyGetFile($ossFilePath, $timeout=315360000)
+    public function ctyGetFile($ossFilePath, $timeout=3600)
     {
         $object = $this->applyPathPrefix($ossFilePath);
 
@@ -657,7 +662,7 @@ class AliyunOssAdapter extends AbstractAdapter
                 return json_encode(array(90000,'文件写入失败',$e->getMessage(),''));
             }
         }else{
-            $timeout = 315360000;
+            $timeout = 3600;
             try {
                 $signedUrl = $this->client->signUrl($bucket, $object, $timeout, "PUT");
                 $content = file_get_contents($localFilePath);
