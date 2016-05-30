@@ -30,8 +30,8 @@ class AliyunOssServiceProvider extends ServiceProvider
         Storage::extend('oss', function ($app, $config) {
             $accessId = $config['access_id'];
             $accessKey = $config['access_key'];
-            $endPoint = (env('APP_ENV')=='local'||env('APP_ENV')=='dev') ? 'test.'.$config['endpoint'] : $config['endpoint'];
-            $bucket = $config['bucket'];
+            $endPoint = $config['endpoint'];
+            $bucket = $config['public_bucket'];
 
             $prefix = null;
             if (isset($config['prefix'])) {

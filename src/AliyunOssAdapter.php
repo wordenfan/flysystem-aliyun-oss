@@ -90,24 +90,17 @@ class AliyunOssAdapter extends AbstractAdapter
         //权限
         $public_dir  = config('filesystems.disks.oss.public');
         $private_dir = config('filesystems.disks.oss.private');
-        $acl = '';
+        $acl = 'public';
         if(in_array(explode('/',$dir)[0],$public_dir)){
             $acl = 'public';
         }elseif(in_array(explode('/',$dir)[0],$private_dir)){
             $acl = 'private';
-        }else{
-            $acl = explode('/',$dir)[0];
         }
         //环境
-        if(env('APP_ENV')=='local'||env('APP_ENV')=='dev') {
-            $bucket_key = 'test_' . $acl;
-        }else{
-            $bucket_key = 'production_' . $acl;
-        }
+        $bucket_key = 'filesystems.disks.oss.'.$acl.'_bucket';
+        $host_key = 'filesystems.disks.oss.'.$acl.'_bucket';
 
-        $bucket_host = config('filesystems.disks.oss.bucket_list')[$bucket_key];
-
-        return $withHost ? $bucket_host : $bucket_host[0];
+        return $withHost ? [config($bucket_key),config($host_key)] : $bucket_key;
     }
 
     /**
