@@ -98,7 +98,7 @@ class AliyunOssAdapter extends AbstractAdapter
         }
         //环境
         $bucket_key = 'filesystems.disks.oss.'.$acl.'_bucket';
-        $host_key = 'filesystems.disks.oss.'.$acl.'_bucket';
+        $host_key = 'filesystems.disks.oss.'.$acl.'_bucket_host';
 
         return $withHost ? [config($bucket_key),config($host_key)] : $bucket_key;
     }
