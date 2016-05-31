@@ -676,7 +676,6 @@ class AliyunOssAdapter extends AbstractAdapter
 
         //删除原文件
         @unlink($localFilePath);
-
         $data = $host.'/'.$object;
 
         return json_encode(array(0,'上传成功',$data));
