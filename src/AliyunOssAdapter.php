@@ -667,10 +667,10 @@ class AliyunOssAdapter extends AbstractAdapter
                 $request->send_request();
                 $res = new ResponseCore($request->get_response_header(),$request->get_response_body(), $request->get_response_code());
                 if (!$res->isOK()) {
-                    return json_encode(9000,'文件上传失败','');
+                    return json_encode(array(9000,'文件上传失败',''));
                 }
             } catch (OssException $e) {
-                return json_encode(9000,'文件写入失败',$e->getMessage());
+                return json_encode(array(9000,'文件写入失败',$e->getMessage()));
             }
         }
 
