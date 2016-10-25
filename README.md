@@ -75,13 +75,14 @@ edit the config file: config/ide-helper.php
 
 ```php
 public function getOssDirectUploadSignature(){
-    $month_day_dir = date('Y_m_d',$_SERVER['REQUEST_TIME']).'/'.date('H',$_SERVER['REQUEST_TIME']).'/';
     $disk = Storage::disk('oss');
-    $dir = 'health_record'.'/'.$month_day_dir;
-    $expire = 30;
-    $res = $disk->ctyDirectUploadSignature($dir,$expire);
 
-    echo $res;
+    $fileName = 'test.png';
+    $local_file_path = 'oss_transfer';//服务器本地路径
+    $oss_path = 'health_record/dev_test';//OSS路径
+    $put_res = $disk->ctyDirectUploadSignature($oss_path, $local_file_path,$fileName);
+    var_dump($put_res);
+    exit;
 }
 ```
 客户端直传回调函数
@@ -113,18 +114,17 @@ public function readFile()
 {
     $disk = Storage::disk('oss');
 
-    //public读
-    $disk->ctySetBucket('public');
-    $oss_file = 'health_record/2016_05_04_74408439_logo.png';
+    //private读
+    $oss_file = 'health_record/dev_test/1.png';
     $get_res = $disk->ctyGetFile($oss_file);
-    echo $get_res;
+    var_dump($get_res);
     exit;
 
-    //private读
-    $disk->ctySetBucket('private');
-    $oss_file = 'health_record/2016_05_04_46763774_test_02.jpg';
-    $get_res = $disk->ctyGetFile($oss_file,30);
-    echo $get_res;
+    //public读
+    $oss_file = 'avatar/3shkZ7-a.png';
+    $get_res = $disk->ctyGetFile($oss_file);
+    var_dump($get_res);
+    exit;
 }
 ```
 文件写入
@@ -133,24 +133,36 @@ public function readFile()
 public function writeFile(Request $request){
     $disk = Storage::disk('oss');
 
+    //public写(服务器端)
+    $fileName = 'test.png';
+    $local_file_path = 'oss_transfer';//服务器本地路径
+    $oss_path = 'avatar/test';//OSS路径
+    $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$fileName);
+    var_dump($put_res);
+    exit;
+
+    //public写(服务器端)
+    $fileName = 'test.png';
+    $local_file_path = 'oss_transfer';//服务器本地路径
+    $oss_path = 'health_record/dev_test';//OSS路径
+    $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$fileName);
+    var_dump($put_res);
+    exit;
+
     //Form表单public写
     $local_file_path = 'oss_transfer';//服务器本地路径
     $oss_path = 'health_record/test';//OSS路径
     $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$request);
-    echo $put_res;
+    var_dump($put_res);
+    exit;
 
     //Form表单private写
-    $disk->ctySetBucket('private');
     $local_file_path = 'oss_transfer';//服务器本地路径
     $oss_path = 'private_health_record/test';//OSS路径
     $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$request);
-    echo $put_res;
+    var_dump($put_res);
+    exit;
 
-    //服务器本地图片上传
-    $disk = Storage::disk('oss');
-    $fileName = date('Y_m_d').'_'.'_test.jpg';
-    $local_file_path = 'oss_transfer';//服务器本地路径
-    $oss_path = 'health_record/test';//OSS路径
-    $put_res = $disk->ctyPutFile($oss_path, $local_file_path,$fileName);
+
 }
 ```

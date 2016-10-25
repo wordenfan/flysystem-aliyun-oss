@@ -13,7 +13,6 @@ use League\Flysystem\Adapter\Polyfill\StreamedTrait;
 use League\Flysystem\Adapter\Polyfill\NotSupportingVisibilityTrait;
 use Illuminate\Http\Request;
 use DateTime;
-use Log;
 
 /**
  * Aliyun Oss Adapter class.
@@ -82,7 +81,7 @@ class AliyunOssAdapter extends AbstractAdapter
      *
      * @return array($bucket,$host)
      */
-    public function getBucket($dir=null,$withHost=false)
+    public function getBucket($dir=null,$withAclAndHost=false)
     {
         if(!$dir){
             return $this->bucket;
@@ -91,16 +90,19 @@ class AliyunOssAdapter extends AbstractAdapter
         $public_dir  = config('filesystems.disks.oss.public');
         $private_dir = config('filesystems.disks.oss.private');
         $acl = 'public';
+        $dir = trim($dir);
         if(in_array(explode('/',$dir)[0],$public_dir)){
             $acl = 'public';
         }elseif(in_array(explode('/',$dir)[0],$private_dir)){
             $acl = 'private';
+        }else{
+            throw new OssException("target dir is not exist");
         }
         //环境
         $bucket_key = 'filesystems.disks.oss.'.$acl.'_bucket';
         $host_key = 'filesystems.disks.oss.'.$acl.'_bucket_host';
 
-        return $withHost ? [config($bucket_key),config($host_key)] : $bucket_key;
+        return $withAclAndHost ? [$acl,config($bucket_key),config($host_key)] : $bucket_key;
     }
 
     /**
@@ -533,12 +535,11 @@ class AliyunOssAdapter extends AbstractAdapter
         $oss_config = config('filesystems.disks.oss');
         $id         = $oss_config['access_id'];
         $key        = $oss_config['access_key'];
-        $endpoint   = $oss_config['endpoint'];
 
-        $bucket_host = $this->getBucket($dir,true);
-        $bucket = $bucket_host[0];
-        $host   = $bucket_host[1];
-        //$host = 'http://'.$bucket.'.'.$endpoint;
+        $acl_bucket_host = $this->getBucket($dir,true);
+        $acl    = $acl_bucket_host[0];
+        $bucket = $acl_bucket_host[1];
+        $host   = $acl_bucket_host[2];
 
         $whole_url = \Request::getUri();
         $callbackUrl = substr($whole_url,0,strpos($whole_url,'/get_oss_signature/health_record'));
@@ -602,21 +603,31 @@ class AliyunOssAdapter extends AbstractAdapter
      * 传太医文件读取
      * ['private', 'public-read', 'public-read-write']
      */
-    public function ctyGetFile($ossFilePath, $timeout=3600)
+    public function ctyGetFile($ossFilePath,$useSsl=true, $timeout=3600)
     {
         $object = $this->applyPathPrefix($ossFilePath);
 
-        $bucket_host = $this->getBucket($ossFilePath,true);
-        $bucket = $bucket_host[0];
-        $host   = $bucket_host[1];
+        $acl_bucket_host = $this->getBucket($ossFilePath,true);
+        $acl    = $acl_bucket_host[0];
+        $bucket = $acl_bucket_host[1];
+        $host   = $acl_bucket_host[2];
 
-        $acl = $this->client->getBucketAcl($bucket);
         //public
-        if(strpos($acl,'public') === 0){
+        if($acl == 'public'){
             $read_url = $host.'/'.$object;
         }else{
             try {
                 $read_url = $this->client->signUrl($bucket, $object, $timeout);
+                $parse_url = parse_url($read_url);
+                if ($useSsl) {
+                    $parse_url['scheme'] = 'https';
+                }
+                $read_url = (isset($parse_url['scheme']) ? $parse_url['scheme'].'://' : '')
+                    .(isset($parse_url['host']) ? $parse_url['host'] : '')
+                    .(isset($parse_url['port']) ? ':'.$parse_url['port'] : '')
+                    .(isset($parse_url['path']) ? $parse_url['path'] : '')
+                    .(isset($parse_url['query']) ? '?'.$parse_url['query'] : '');
+
             } catch (OssException $e) {
                 return json_encode(array(0,'文件读取失败',$e->getMessage()));
             }
@@ -643,16 +654,17 @@ class AliyunOssAdapter extends AbstractAdapter
         $ossFilePath = $ossDir.'/'.$file_name;
         //
         $object = $this->applyPathPrefix($ossFilePath);
-        $bucket_host = $this->getBucket($ossFilePath,true);
-        $bucket = $bucket_host[0];
-        $host   = $bucket_host[1];
-        $acl = $this->client->getBucketAcl($bucket);
+        $acl_bucket_host = $this->getBucket($ossFilePath,true);
+        $acl    = $acl_bucket_host[0];
+        $bucket = $acl_bucket_host[1];
+        $host   = $acl_bucket_host[2];
+
         //public
-        if(strpos($acl,'public') === 0){
+        if($acl == 'public'){
             try {
                 $this->client->uploadFile($bucket, $object, $localFilePath);
             } catch (OssException $e) {
-                return json_encode(array(90000,'文件写入失败',$e->getMessage(),''));
+                return json_encode(array(90000,'public文件写入失败',$e->getMessage(),''));
             }
         }else{
             $timeout = 3600;
@@ -667,10 +679,10 @@ class AliyunOssAdapter extends AbstractAdapter
                 $request->send_request();
                 $res = new ResponseCore($request->get_response_header(),$request->get_response_body(), $request->get_response_code());
                 if (!$res->isOK()) {
-                    return json_encode(array(9000,'文件上传失败',''));
+                    return json_encode(9000,'文件上传失败','');
                 }
             } catch (OssException $e) {
-                return json_encode(array(9000,'文件写入失败',$e->getMessage()));
+                return json_encode(9000,'文件写入失败',$e->getMessage());
             }
         }
 
