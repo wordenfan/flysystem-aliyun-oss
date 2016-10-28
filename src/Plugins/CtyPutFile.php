@@ -31,7 +31,7 @@ class CtyPutFile extends AbstractPlugin
      * @param array  $config
      * @return bool
      */
-    public function handle($path, $localFilePath,$request, array $config = [])
+    public function handle($path, $localFilePath,$request,$useSsl=true,$config = [])
     {
         if (! method_exists($this->filesystem, 'getAdapter')) {
             return false;
@@ -46,6 +46,6 @@ class CtyPutFile extends AbstractPlugin
             $config->setFallback($this->filesystem->getConfig());
         }
 
-        return $this->filesystem->getAdapter()->ctyPutFile($path, $localFilePath,$request, $config);
+        return $this->filesystem->getAdapter()->ctyPutFile($path, $localFilePath,$request,$useSsl,$config);
     }
 }

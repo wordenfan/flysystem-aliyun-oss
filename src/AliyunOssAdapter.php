@@ -89,18 +89,19 @@ class AliyunOssAdapter extends AbstractAdapter
         //权限
         $public_dir  = config('filesystems.disks.oss.public');
         $private_dir = config('filesystems.disks.oss.private');
-        $acl = 'public';
+
         $dir = trim($dir);
         if(in_array(explode('/',$dir)[0],$public_dir)){
             $acl = 'public';
+            $this->client = new OssClient(config('filesystems.disks.oss.access_id'), config('filesystems.disks.oss.access_key'), config('filesystems.disks.oss.endpoint_public'),true);
         }elseif(in_array(explode('/',$dir)[0],$private_dir)){
             $acl = 'private';
         }else{
             throw new OssException("target dir is not exist");
         }
         //环境
-        $bucket_key = 'filesystems.disks.oss.'.$acl.'_bucket';
-        $host_key = 'filesystems.disks.oss.'.$acl.'_bucket_host';
+        $bucket_key = 'filesystems.disks.oss.bucket_'.$acl;
+        $host_key = 'filesystems.disks.oss.endpoint_'.$acl;
 
         return $withAclAndHost ? [$acl,config($bucket_key),config($host_key)] : $bucket_key;
     }
@@ -530,7 +531,7 @@ class AliyunOssAdapter extends AbstractAdapter
     /**
      * 文件直传读取签名
      */
-    public function ctyDirectUploadSignature($dir,$expire)
+    public function ctyDirectUploadSignature($dir,$expire,$useSsl=true)
     {
         $oss_config = config('filesystems.disks.oss');
         $id         = $oss_config['access_id'];
@@ -540,6 +541,7 @@ class AliyunOssAdapter extends AbstractAdapter
         $acl    = $acl_bucket_host[0];
         $bucket = $acl_bucket_host[1];
         $host   = $acl_bucket_host[2];
+        $host   = $useSsl ? 'https://'.$host : 'http://'.$host;
 
         $whole_url = \Request::getUri();
         $callbackUrl = substr($whole_url,0,strpos($whole_url,'/get_oss_signature/health_record'));
@@ -605,24 +607,33 @@ class AliyunOssAdapter extends AbstractAdapter
      */
     public function ctyGetFile($ossFilePath,$useSsl=true, $timeout=3600)
     {
-        $object = $this->applyPathPrefix($ossFilePath);
-
         $acl_bucket_host = $this->getBucket($ossFilePath,true);
         $acl    = $acl_bucket_host[0];
         $bucket = $acl_bucket_host[1];
         $host   = $acl_bucket_host[2];
 
+        $objectPathInfo = parse_url($ossFilePath);
+        $object         = $objectPathInfo['path'];
+        $query_url     = $objectPathInfo['query']??'';
+        $option = [];
+        if(strlen($query_url)>0){
+            $temp_arr = explode('&',$query_url);
+            foreach($temp_arr as $v){
+                $optionChild = explode('=', $v);
+                $option[$optionChild[0]] = $optionChild[1];
+            }
+            $query_url = '?'.$query_url;
+        }
+        $scheme = $useSsl ? 'https' : 'http';
+
         //public
         if($acl == 'public'){
-            $read_url = $host.'/'.$object;
+            $read_url = $scheme.'://'.$host.'/'.$object.$query_url;
         }else{
             try {
-                $read_url = $this->client->signUrl($bucket, $object, $timeout);
+                $read_url = $this->client->signUrl($bucket, $object, $timeout,'GET',$option);
                 $parse_url = parse_url($read_url);
-                if ($useSsl) {
-                    $parse_url['scheme'] = 'https';
-                }
-                $read_url = (isset($parse_url['scheme']) ? $parse_url['scheme'].'://' : '')
+                $read_url = $scheme.'://'
                     .(isset($parse_url['host']) ? $parse_url['host'] : '')
                     .(isset($parse_url['port']) ? ':'.$parse_url['port'] : '')
                     .(isset($parse_url['path']) ? $parse_url['path'] : '')
@@ -639,7 +650,7 @@ class AliyunOssAdapter extends AbstractAdapter
      * 传太医服务器端上传文件
      *
      */
-    public function ctyPutFile($ossDir, $localDirPath,$request)
+    public function ctyPutFile($ossDir, $localDirPath,$request,$useSsl=true)
     {
         //是否为客户端上传
         if(is_string($request)){
@@ -679,16 +690,17 @@ class AliyunOssAdapter extends AbstractAdapter
                 $request->send_request();
                 $res = new ResponseCore($request->get_response_header(),$request->get_response_body(), $request->get_response_code());
                 if (!$res->isOK()) {
-                    return json_encode(9000,'文件上传失败','');
+                    return json_encode(array(90000,'文件写入失败',''));
                 }
             } catch (OssException $e) {
-                return json_encode(9000,'文件写入失败',$e->getMessage());
+                return json_encode(array(90000,'文件写入失败',$e->getMessage()));
             }
         }
 
         //删除原文件
         @unlink($localFilePath);
-        $data = $host.'/'.$object;
+        $scheme = $useSsl ? 'https' : 'http';
+        $data = $scheme.'://'.$host.'/'.$object;
 
         return json_encode(array(0,'上传成功',$data));
     }

@@ -29,7 +29,7 @@ class CtyDirectUploadSignature extends AbstractPlugin
      * @param string $dir
      * @return json
      */
-    public function handle($dir,$expire)
+    public function handle($dir,$expire,$useSsl=true)
     {
         if (! method_exists($this->filesystem, 'getAdapter')) {
             return false;
@@ -39,6 +39,6 @@ class CtyDirectUploadSignature extends AbstractPlugin
             return false;
         }
 
-        return $this->filesystem->getAdapter()->ctyDirectUploadSignature($dir,$expire);
+        return $this->filesystem->getAdapter()->ctyDirectUploadSignature($dir,$expire,$useSsl);
     }
 }

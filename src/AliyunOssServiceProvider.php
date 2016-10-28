@@ -29,17 +29,16 @@ class AliyunOssServiceProvider extends ServiceProvider
     {
         Storage::extend('oss', function ($app, $config) {
             $accessId = $config['access_id'];
-            $accessKey = $config['access_key'];
-            $endPoint = $config['endpoint'];
-            $bucket = $config['public_bucket'];
+            $accessKey= $config['access_key'];
+            $endPoint = $config['endpoint_private'];
+            $bucket   = $config['bucket_private'];
 
             $prefix = null;
             if (isset($config['prefix'])) {
                 $prefix = $config['prefix'];
             }
 
-            $client = new OssClient($accessId, $accessKey, $endPoint);
-//            $client = new OssClient($accessId, $accessKey, $endPoint,true);
+            $client = new OssClient($accessId, $accessKey, $endPoint,true);
             $adapter = new AliyunOssAdapter($client, $bucket, $prefix);
 
             $filesystem = new Filesystem($adapter);
