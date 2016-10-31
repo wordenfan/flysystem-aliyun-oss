@@ -540,16 +540,9 @@ class AliyunOssAdapter extends AbstractAdapter
         $acl_bucket_host = $this->getBucket($dir,true);
         $acl    = $acl_bucket_host[0];
         $bucket = $acl_bucket_host[1];
-        $host   = $acl_bucket_host[2];
-        $host   = $useSsl ? 'https://'.$host : 'http://'.$host;
+        $host   = ($useSsl ? 'https://' : 'http://').rtrim($oss_config['oss_direct_upload_callback_host'],'/');
 
-        $whole_url = \Request::getUri();
-        $callbackUrl = substr($whole_url,0,strpos($whole_url,'/get_oss_signature/health_record'));
-        $callbackUrl = $callbackUrl.'/get_oss_signature/callback';
-        if(env('APP_ENV')=='local'||env('APP_ENV')=='dev'){
-            $callbackUrl = $oss_config['oss_direct_upload_callback'];//方便本地调试
-        }
-
+        $callbackUrl = $host.'/'.ltrim($oss_config['oss_direct_upload_callback'],'/');
         $callback_param = array('callbackUrl'=>$callbackUrl,
             "callbackHost"=> $oss_config['oss_direct_upload_callback_host'],//不带http://
             'callbackBody'=>'filename=${object}&size=${size}&mimeType=${mimeType}&height=${imageInfo.height}&width=${imageInfo.width}',
@@ -557,7 +550,6 @@ class AliyunOssAdapter extends AbstractAdapter
         $callback_string = json_encode($callback_param);
 
         $base64_callback_body = base64_encode($callback_string);
-        //$base64_callback_body = '';//
 
         $now = time();
         $expire = $expire; //设置该policy超时时间是10s. 即这个policy过了这个有效时间，将不能访问
