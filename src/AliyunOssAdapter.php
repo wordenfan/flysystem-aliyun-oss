@@ -632,11 +632,11 @@ class AliyunOssAdapter extends AbstractAdapter
                     .(isset($parse_url['query']) ? '?'.$parse_url['query'] : '');
 
             } catch (OssException $e) {
-                return json_encode(array(0,'文件读取失败',$e->getMessage()));
+                $this->echoJson(array(0,'文件读取失败',$e->getMessage()));
             }
         }
 
-        return json_encode(array(0,'文件读取成功',$read_url));
+        $this->echoJson(array(0,'文件读取成功',$read_url));
     }
     /**
      * 传太医服务器端上传文件
@@ -650,7 +650,7 @@ class AliyunOssAdapter extends AbstractAdapter
         }else{
             $file_name = $this->prePutFile($request,$localDirPath);
             if(is_array($file_name)){
-                return json_encode($file_name);
+                $this->echoJson($file_name);
             }
         }
         $localFilePath = $localDirPath.'/'.$file_name;
@@ -667,7 +667,7 @@ class AliyunOssAdapter extends AbstractAdapter
             try {
                 $this->client->uploadFile($bucket, $object, $localFilePath);
             } catch (OssException $e) {
-                return json_encode(array(90000,'public文件写入失败',$e->getMessage(),''));
+                $this->echoJson(array(90000,'public文件写入失败',$e->getMessage(),''));
             }
         }else{
             $timeout = 3600;
@@ -682,10 +682,10 @@ class AliyunOssAdapter extends AbstractAdapter
                 $request->send_request();
                 $res = new ResponseCore($request->get_response_header(),$request->get_response_body(), $request->get_response_code());
                 if (!$res->isOK()) {
-                    return json_encode(array(90000,'文件写入失败',''));
+                    $this->echoJson(array(90000,'文件写入失败',''));
                 }
             } catch (OssException $e) {
-                return json_encode(array(90000,'文件写入失败',$e->getMessage()));
+                $this->echoJson(array(90000,'文件写入失败',$e->getMessage()));
             }
         }
 
@@ -694,7 +694,7 @@ class AliyunOssAdapter extends AbstractAdapter
         $scheme = $useSsl ? 'https' : 'http';
         $data = $scheme.'://'.$host.'/'.$object;
 
-        return json_encode(array(0,'上传成功',$data));
+        $this->echoJson(array(0,'上传成功',$data));
     }
     /**
      * 传太医客户端form表单上传文件校验
@@ -734,5 +734,16 @@ class AliyunOssAdapter extends AbstractAdapter
         $file->move($localDirPath, $fileName);
 
         return $fileName;
+    }
+
+    private function echoJson($arr){
+        $retArr = [
+            "code"    => $arr[0],
+            "message" => $arr[1]??'',
+            "data"    => $arr[2]??''
+        ];
+
+        echo json_encode($retArr);
+        exit;
     }
 }
