@@ -540,9 +540,10 @@ class AliyunOssAdapter extends AbstractAdapter
         $acl_bucket_host = $this->getBucket($dir,true);
         $acl    = $acl_bucket_host[0];
         $bucket = $acl_bucket_host[1];
-        $host   = ($useSsl ? 'https://' : 'http://').rtrim($oss_config['oss_direct_upload_callback_host'],'/');
-
-        $callbackUrl = $host.'/'.ltrim($oss_config['oss_direct_upload_callback'],'/');
+        $img_host = ($useSsl ? 'https://' : 'http://').$acl_bucket_host[2];
+        $web_host = ($useSsl ? 'https://' : 'http://').rtrim($oss_config['oss_direct_upload_callback_host'],'/');
+        
+        $callbackUrl = $web_host.'/'.ltrim($oss_config['oss_direct_upload_callback'],'/');
         $callback_param = array('callbackUrl'=>$callbackUrl,
             "callbackHost"=> $oss_config['oss_direct_upload_callback_host'],//不带http://
             'callbackBody'=>'filename=${object}&size=${size}&mimeType=${mimeType}&height=${imageInfo.height}&width=${imageInfo.width}',
@@ -574,7 +575,7 @@ class AliyunOssAdapter extends AbstractAdapter
 
         $response = array();
         $response['accessid'] = $id;
-        $response['host'] = $host;
+        $response['host'] = $img_host;
         $response['policy'] = $base64_policy;
         $response['signature'] = $signature;
         $response['expire'] = $end;
@@ -632,11 +633,11 @@ class AliyunOssAdapter extends AbstractAdapter
                     .(isset($parse_url['query']) ? '?'.$parse_url['query'] : '');
 
             } catch (OssException $e) {
-                $this->echoJson(array(0,'文件读取失败',$e->getMessage()));
+                return $this->returnJson(array(0,'文件读取失败',$e->getMessage()));
             }
         }
 
-        $this->echoJson(array(0,'文件读取成功',$read_url));
+        return $this->returnJson(array(0,'文件读取成功',$read_url));
     }
     /**
      * 传太医服务器端上传文件
@@ -650,7 +651,7 @@ class AliyunOssAdapter extends AbstractAdapter
         }else{
             $file_name = $this->prePutFile($request,$localDirPath);
             if(is_array($file_name)){
-                $this->echoJson($file_name);
+                return $this->returnJson($file_name);
             }
         }
         $localFilePath = $localDirPath.'/'.$file_name;
@@ -667,7 +668,7 @@ class AliyunOssAdapter extends AbstractAdapter
             try {
                 $this->client->uploadFile($bucket, $object, $localFilePath);
             } catch (OssException $e) {
-                $this->echoJson(array(90000,'public文件写入失败',$e->getMessage(),''));
+                return $this->returnJson(array(90000,'public文件写入失败',$e->getMessage(),''));
             }
         }else{
             $timeout = 3600;
@@ -682,10 +683,10 @@ class AliyunOssAdapter extends AbstractAdapter
                 $request->send_request();
                 $res = new ResponseCore($request->get_response_header(),$request->get_response_body(), $request->get_response_code());
                 if (!$res->isOK()) {
-                    $this->echoJson(array(90000,'文件写入失败',''));
+                    return $this->returnJson(array(90000,'文件写入失败',''));
                 }
             } catch (OssException $e) {
-                $this->echoJson(array(90000,'文件写入失败',$e->getMessage()));
+                return $this->returnJson(array(90000,'文件写入失败',$e->getMessage()));
             }
         }
 
@@ -694,7 +695,7 @@ class AliyunOssAdapter extends AbstractAdapter
         $scheme = $useSsl ? 'https' : 'http';
         $data = $scheme.'://'.$host.'/'.$object;
 
-        $this->echoJson(array(0,'上传成功',$data));
+        return $this->returnJson(array(0,'上传成功',$data));
     }
     /**
      * 传太医客户端form表单上传文件校验
@@ -736,14 +737,13 @@ class AliyunOssAdapter extends AbstractAdapter
         return $fileName;
     }
 
-    private function echoJson($arr){
+    private function returnJson($arr){
         $retArr = [
             "code"    => $arr[0],
             "message" => $arr[1]??'',
             "data"    => $arr[2]??''
         ];
 
-        echo json_encode($retArr);
-        exit;
+        return json_encode($retArr);
     }
 }
