@@ -495,15 +495,15 @@ class AliyunOssAdapter extends AbstractAdapter
             }
 
             $url = (isset($parse_url['scheme']) ? $parse_url['scheme'].'://' : '')
-                   .(
-                   isset($parse_url['user']) ?
-                       $parse_url['user'].(isset($parse_url['pass']) ? ':'.$parse_url['pass'] : '').'@'
-                       : ''
-                   )
-                   .(isset($parse_url['host']) ? $parse_url['host'] : '')
-                   .(isset($parse_url['port']) ? ':'.$parse_url['port'] : '')
-                   .(isset($parse_url['path']) ? $parse_url['path'] : '')
-                   .(isset($parse_url['query']) ? '?'.$parse_url['query'] : '');
+                .(
+                isset($parse_url['user']) ?
+                    $parse_url['user'].(isset($parse_url['pass']) ? ':'.$parse_url['pass'] : '').'@'
+                    : ''
+                )
+                .(isset($parse_url['host']) ? $parse_url['host'] : '')
+                .(isset($parse_url['port']) ? ':'.$parse_url['port'] : '')
+                .(isset($parse_url['path']) ? $parse_url['path'] : '')
+                .(isset($parse_url['query']) ? '?'.$parse_url['query'] : '');
         }
 
         return $url;
@@ -542,7 +542,7 @@ class AliyunOssAdapter extends AbstractAdapter
         $bucket = $acl_bucket_host[1];
         $img_host = ($useSsl ? 'https://' : 'http://').$acl_bucket_host[2];
         $web_host = ($useSsl ? 'https://' : 'http://').rtrim($oss_config['oss_direct_upload_callback_host'],'/');
-        
+
         $callbackUrl = $web_host.'/'.ltrim($oss_config['oss_direct_upload_callback'],'/');
         $callback_param = array('callbackUrl'=>$callbackUrl,
             "callbackHost"=> $oss_config['oss_direct_upload_callback_host'],//不带http://
@@ -600,14 +600,15 @@ class AliyunOssAdapter extends AbstractAdapter
      */
     public function ctyGetFile($ossFilePath,$useSsl=true, $timeout=3600)
     {
-        $acl_bucket_host = $this->getBucket($ossFilePath,true);
+        $objectPathInfo = parse_url($ossFilePath);
+        $object         = ltrim($objectPathInfo['path'],'/');
+        $query_url      = $objectPathInfo['query']??'';
+
+        $acl_bucket_host = $this->getBucket($object,true);
         $acl    = $acl_bucket_host[0];
         $bucket = $acl_bucket_host[1];
         $host   = $acl_bucket_host[2];
 
-        $objectPathInfo = parse_url($ossFilePath);
-        $object         = $objectPathInfo['path'];
-        $query_url     = $objectPathInfo['query']??'';
         $option = [];
         if(strlen($query_url)>0){
             $temp_arr = explode('&',$query_url);
